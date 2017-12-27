@@ -19,7 +19,7 @@ import java.util.List;
  * Created by romananchugov on 27.12.2017.
  */
 
-public class PhotoGalleryFragment extends Fragment {
+public class PhotoGalleryFragment extends Fragment{
 
     private RecyclerView mPhotoRecyclerView;
     public static final String TAG = "PhotoGalleryFragment";
@@ -43,6 +43,7 @@ public class PhotoGalleryFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         mPhotoRecyclerView = v.findViewById(R.id.fragment_photo_gallery_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        mPhotoRecyclerView.addOnScrollListener(new RecyclerEndListener());
         setupAdapter();
         return v;
     }
@@ -62,8 +63,13 @@ public class PhotoGalleryFragment extends Fragment {
 
         @Override
         protected void onPostExecute(List<GalleryItem> galleryItems) {
-            mItems = galleryItems;
-            setupAdapter();
+            mItems.addAll(galleryItems);
+
+            if(FlickrFetchr.PAGE == 1) {
+                setupAdapter();
+            }else{
+                mPhotoRecyclerView.getAdapter().notifyDataSetChanged();
+            }
         }
     }
     private class PhotoHolder extends RecyclerView.ViewHolder{
@@ -102,4 +108,22 @@ public class PhotoGalleryFragment extends Fragment {
             return mGalleryItems.size();
         }
     }
+
+    private class RecyclerEndListener extends RecyclerView.OnScrollListener{
+        @Override
+        public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+            super.onScrollStateChanged(recyclerView, newState);
+
+            GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager()  ;
+            int visibleItemCount = layoutManager.getChildCount();
+            int totalItemCount = layoutManager.getItemCount();
+            int pastVisibleItems = layoutManager.findFirstCompletelyVisibleItemPosition();
+
+            if(pastVisibleItems+visibleItemCount >= totalItemCount){
+                FlickrFetchr.PAGE++;
+                new FetchItemsTask().execute();
+            }
+        }
+    }
+
 }

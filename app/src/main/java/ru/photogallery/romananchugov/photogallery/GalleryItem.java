@@ -5,36 +5,36 @@ package ru.photogallery.romananchugov.photogallery;
  */
 
 public class GalleryItem {
-    private String mCaption;
-    private String mId;
-    private String mUri;
+    private String title;
+    private String id;
+    private String url_s;
 
     @Override
     public String toString() {
-        return mCaption;
+        return title;
     }
 
     public String getmCaption() {
-        return mCaption;
+        return title;
     }
 
     public void setmCaption(String mCaption) {
-        this.mCaption = mCaption;
+        this.title = mCaption;
     }
 
     public String getmId() {
-        return mId;
+        return id;
     }
 
     public void setmId(String mId) {
-        this.mId = mId;
+        this.id = mId;
     }
 
     public String getmUri() {
-        return mUri;
+        return url_s;
     }
 
     public void setmUri(String mUri) {
-        this.mUri = mUri;
+        this.url_s = mUri;
     }
 }

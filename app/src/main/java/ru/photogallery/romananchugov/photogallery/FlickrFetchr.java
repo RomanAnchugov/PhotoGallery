@@ -3,6 +3,9 @@ package ru.photogallery.romananchugov.photogallery;
 import android.net.Uri;
 import android.util.Log;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,6 +27,7 @@ public class FlickrFetchr {
     private static final String TAG = "FlickFetchr";
     private static final String API_KEY = "6f95d4475c52bb67f5a29c3b7dad2a13";
     private static final String FLICKR_URL = "https://api.flickr.com/services/rest/";
+    public static int PAGE = 1;
 
     public byte[] getUrlBytes(String urlSpec) throws IOException{
         URL url = new URL(urlSpec);
@@ -64,6 +68,7 @@ public class FlickrFetchr {
                     .appendQueryParameter("format", "json")
                     .appendQueryParameter("nojsoncallback", "1")
                     .appendQueryParameter("extras", "url_s")
+                    .appendQueryParameter("page", PAGE + "")
                     .build().toString();
             String jsonString = getUrlString(url);
             //Log.i(TAG, "Recieved JSON: " + jsonString);
@@ -83,16 +88,14 @@ public class FlickrFetchr {
 
         for(int i = 0; i < photoJsonArray.length(); i++){
             JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
-
-            GalleryItem item = new GalleryItem();
-            item.setmId(photoJsonObject.getString("id"));
-            item.setmCaption(photoJsonObject.getString("title"));
+            GalleryItem item;
 
             if(!photoJsonObject.has("url_s")){
                 continue;
             }
 
-            item.setmUri(photoJsonObject.getString("url_s"));
+            Gson gson = new GsonBuilder().create();
+            item = gson.fromJson(photoJsonObject.toString(), GalleryItem.class);
             items.add(item);
         }
         return items;
