@@ -1,5 +1,6 @@
 package ru.photogallery.romananchugov.photogallery;
 
+import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -11,11 +12,17 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +34,7 @@ import java.util.List;
 public class PhotoGalleryFragment extends Fragment{
 
     private RecyclerView mPhotoRecyclerView;
+    private ProgressBar progressBar;
     public static final String TAG = "PhotoGalleryFragment";
 
     private List<GalleryItem> mItems = new ArrayList<>();
@@ -41,7 +49,11 @@ public class PhotoGalleryFragment extends Fragment{
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-        new FetchItemsTask().execute();
+        setHasOptionsMenu(true);
+
+        progressBar =(ProgressBar) getActivity().findViewById(R.id.loading_progress_bar);
+
+        updateItems();
 
         Handler responseHandler = new Handler();
         mThumbnailDownLoader = new ThumbnailDownloader<>(responseHandler);
@@ -55,6 +67,69 @@ public class PhotoGalleryFragment extends Fragment{
         mThumbnailDownLoader.start();
         mThumbnailDownLoader.getLooper();
         Log.i(TAG, "Background thread started");
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.fragment_photo_gallery, menu);
+
+        final MenuItem searchItem = menu.findItem(R.id.menu_item_search);
+        final SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                Log.d(TAG, "QueryTextSubmit: " + s);
+                //clear recycler
+                mPhotoRecyclerView.setAdapter(null);
+
+                QueryPreferences.setStoredQuery(getActivity(), s);
+                FlickrFetchr.PAGE = 0;
+                updateItems();
+                //close keyboard
+                Activity activity = getActivity();
+                InputMethodManager imm = (InputMethodManager) activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
+                View view = activity.getCurrentFocus();
+                if (view == null) {
+                    view = new View(activity);
+                }
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                searchView.onActionViewCollapsed();
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                Log.d(TAG, "QueryTextChange: " + s);
+                return false;
+            }
+        });
+
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String query = QueryPreferences.getStoredQuery(getActivity());
+                searchView.setQuery(query, false);
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.menu_item_clear:
+                QueryPreferences.setStoredQuery(getActivity(), null);
+                updateItems();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void updateItems(){
+        String query = QueryPreferences.getStoredQuery(getActivity());
+        new FetchItemsTask(query).execute();
     }
 
     @Nullable
@@ -83,17 +158,36 @@ public class PhotoGalleryFragment extends Fragment{
 
     private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>>{
 
+        private String mQuery;
+
+        public FetchItemsTask(String query){
+            mQuery = query;
+            progressBar.setVisibility(View.VISIBLE);
+        }
+
         @Override
         protected List<GalleryItem> doInBackground(Void... voids) {
-            return new FlickrFetchr().fetchItems();
+            if(mQuery == null){
+                return new FlickrFetchr().fetchRecentPhotos();
+            }else {
+                return new FlickrFetchr().searchPhotos(mQuery);
+            }
         }
 
         @Override
         protected void onPostExecute(List<GalleryItem> galleryItems) {
+            progressBar.setVisibility(View.GONE);
+            if(FlickrFetchr.PAGE == 0){
+                FlickrFetchr.PAGE = 1;
+                mItems.clear();
+            }
             mItems.addAll(galleryItems);
+            setupAdapter();
 
             if(FlickrFetchr.PAGE == 1) {
                 setupAdapter();
+                mPhotoRecyclerView.getAdapter().notifyDataSetChanged();
+                FlickrFetchr.PAGE++;
             }else{
                 mPhotoRecyclerView.getAdapter().notifyDataSetChanged();
             }
@@ -153,7 +247,7 @@ public class PhotoGalleryFragment extends Fragment{
 
             if(pastVisibleItems+visibleItemCount >= totalItemCount){
                 FlickrFetchr.PAGE++;
-                new FetchItemsTask().execute();
+                new FetchItemsTask(QueryPreferences.getStoredQuery(getActivity())).execute();
             }
         }
     }
