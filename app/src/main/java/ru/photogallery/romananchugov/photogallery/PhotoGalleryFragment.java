@@ -70,7 +70,7 @@ public class PhotoGalleryFragment extends Fragment{
     }
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+    public void onCreateOptionsMenu(final Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.fragment_photo_gallery, menu);
 
@@ -95,7 +95,11 @@ public class PhotoGalleryFragment extends Fragment{
                     view = new View(activity);
                 }
                 imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                //close search view
                 searchView.onActionViewCollapsed();
+                MenuItem item = menu.findItem(R.id.menu_item_toggle_polling);
+                ;
+
                 return true;
             }
 
@@ -113,6 +117,15 @@ public class PhotoGalleryFragment extends Fragment{
                 searchView.setQuery(query, false);
             }
         });
+
+
+        MenuItem item = menu.findItem(R.id.menu_item_toggle_polling);
+        if(PollService.isServiceAlarmOn(getActivity())){
+            item.setTitle(R.string.stop_polling);
+        }else{
+            item.setTitle(R.string.start_polling);
+        }
+
     }
 
     @Override
@@ -121,6 +134,12 @@ public class PhotoGalleryFragment extends Fragment{
             case R.id.menu_item_clear:
                 QueryPreferences.setStoredQuery(getActivity(), null);
                 updateItems();
+                return true;
+            case R.id.menu_item_toggle_polling:
+                boolean shouldStartAlarm =
+                        !PollService.isServiceAlarmOn(getActivity());
+                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
+                getActivity().invalidateOptionsMenu();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
