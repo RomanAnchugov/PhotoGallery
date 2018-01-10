@@ -1,16 +1,14 @@
 package ru.photogallery.romananchugov.photogallery;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
-import android.os.Build;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
@@ -25,6 +23,11 @@ import java.util.List;
 public class PollService extends IntentService {
     private final static String TAG = "PollService";
     private static final int POLL_INTERVAL = 1000;
+    public static final String ACTION_SHOW_NOTIFICATION = "ru.photogallery.romananchugov.photogallery.SHOW_NOTIFICATION";
+    public static final String PERM_PRIVATE = "ru.photogallery.romananchugov.photogallery.PRIVATE";
+
+    public static final String REQUEST_CODE = "REQUEST_CODE";
+    public static final String NOTIFICATION = "NOTIFICATION";
 
     public static Intent newIntent(Context context){
         return new Intent(context, PollService.class);
@@ -64,11 +67,6 @@ public class PollService extends IntentService {
             Intent i = PhotoGalleryActivity.newIntent(this);
             PendingIntent pi = PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_UPDATE_CURRENT);
 
-            NotificationChannel channel = null;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-               channel = new NotificationChannel("Channel_id", "channel_name", NotificationManager.IMPORTANCE_HIGH);
-            }
-
             Notification notification = new NotificationCompat.Builder(getApplicationContext())
                     .setTicker(resources.getString(R.string.new_picture_title))
                     .setSmallIcon(android.R.drawable.ic_menu_report_image)
@@ -79,16 +77,8 @@ public class PollService extends IntentService {
                     .setChannelId("Channel_id")
                     .build();
 
-//            NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
-//            notificationManagerCompat.notify(0, notification);
+            showBackgroundNotification(0, notification);
 
-            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                nm.createNotificationChannel(channel);
-            }
-
-            nm.notify(1245, notification);
             Log.i(TAG, notification.toString());
         }
 
@@ -114,12 +104,22 @@ public class PollService extends IntentService {
             alarmManager.cancel(pi);
             pi.cancel();
         }
+
+        QueryPreferences.setAlarmOn(context, isOn);
     }
 
     public static boolean isServiceAlarmOn(Context context){
         Intent i = PollService.newIntent(context);
         PendingIntent pi = PendingIntent.getService(context, 0, i, PendingIntent.FLAG_NO_CREATE);
         return pi != null;
+    }
+
+    private void showBackgroundNotification(int requestCode, Notification notification){
+        Intent i = new Intent(ACTION_SHOW_NOTIFICATION);
+        i.putExtra(REQUEST_CODE, requestCode);
+        i.putExtra(NOTIFICATION, notification);
+        sendOrderedBroadcast(i, PERM_PRIVATE, null, null, Activity.RESULT_OK, null, null);
+
     }
 
 }
