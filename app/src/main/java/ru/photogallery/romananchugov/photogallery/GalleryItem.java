@@ -1,5 +1,7 @@
 package ru.photogallery.romananchugov.photogallery;
 
+import android.net.Uri;
+
 /**
  * Created by romananchugov on 27.12.2017.
  */
@@ -8,6 +10,7 @@ public class GalleryItem {
     private String title;
     private String id;
     private String url_s;
+    private String mOwner;
 
     @Override
     public String toString() {
@@ -36,5 +39,20 @@ public class GalleryItem {
 
     public void setmUri(String mUri) {
         this.url_s = mUri;
+    }
+
+    public String getmOwner() {
+        return mOwner;
+    }
+    public void setmOwner(String mOwner) {
+        this.mOwner = mOwner;
+    }
+
+    public Uri getPhotoPageUri(){
+        return Uri.parse("https://www.flickr.com/photos/")
+                .buildUpon()
+                .appendPath(mOwner)
+                .appendPath(id)
+                .build();
     }
 }

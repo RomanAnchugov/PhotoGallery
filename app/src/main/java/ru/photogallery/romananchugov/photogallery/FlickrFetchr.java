@@ -109,6 +109,7 @@ public class FlickrFetchr {
 
             Gson gson = new GsonBuilder().create();
             item = gson.fromJson(photoJsonObject.toString(), GalleryItem.class);
+            item.setmOwner(photoJsonObject.getString("owner"));
             items.add(item);
         }
         return items;
